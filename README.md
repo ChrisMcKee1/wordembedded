@@ -106,11 +106,59 @@ Read this section before you build anything new on SPE.
 | Recycle bin (list, restore, purge) | [`/storage/fileStorage/containers/{id}/recycleBin`](https://learn.microsoft.com/en-us/graph/api/recyclebin-list-items?view=graph-rest-1.0) |
 | Custom properties on containers | [`/customProperties`](https://learn.microsoft.com/en-us/graph/api/filestoragecontainer-post-customproperty?view=graph-rest-1.0) (Wordembedded uses this to store per-container publish targets) |
 
+### Editing flows — the truth, two paths
+
+There are two officially supported ways to edit Word / Excel / PowerPoint stored in an SPE
+container, and Wordembedded implements both.
+
+**Path A — Inline editing in our iframe via the beta `driveItem: preview` API.**
+The Microsoft Graph **beta** endpoint accepts three parameters the v1.0 endpoint does not
+([driveItem: preview (beta)](https://learn.microsoft.com/en-us/graph/api/driveitem-preview?view=graph-rest-beta)):
+
+| Parameter | Effect |
+|---|---|
+| `viewer: "office"` | Render with Office for the web (instead of OneDrive previewer) |
+| `chromeless: false` | Show Office's toolbars and editing chrome |
+| `allowEdit: true` | "The file can be edited from the embedded UI." |
+
+When all three are set, the returned `getUrl` is an embeddable URL that **does** open a fully
+editable Office for the web session inside our iframe — co-authoring, AutoSave, comments,
+@mentions, version history all keep working. Wordembedded exposes this behind an **"Edit inline
+(beta)"** Fluent `Switch` on the preview page (`src/frontend/src/app/files/[containerId]/preview/[itemId]/page.tsx`).
+When the switch is on, the backend (`src/backend/Wordembedded.Api/Endpoints/PreviewEndpoints.cs`)
+routes the preview call to `https://graph.microsoft.com/beta/...` and forwards those flags. When
+the switch is off we use `v1.0` for a clean read-only preview with `nb=true` to hide the banner.
+
+**Caveat the docs are explicit about.** Each of `viewer`, `chromeless`, `allowEdit` is marked in the
+docs as:
+> "This parameter is deprecated and will not be made available on the v1.0 endpoint."
+
+It works today, the official samples and Microsoft demos use it, and there's no announced
+timeline for removal — but Microsoft has been clear they won't promote it to v1.0. Treat inline
+edit as a great UX option that you should keep behind a feature flag, with a graceful fallback to
+Path B.
+
+**Path B — Edit in Office for the web (new tab / popup) via `driveItem.webUrl`.**
+This is the path Microsoft documents as the long-term-supported pattern. Office for the web
+serves the document on `*.officeapps.live.com` / `*.sharepoint.com` and sets a
+`Content-Security-Policy: frame-ancestors` that **blocks third-party iframe embedding**
+([Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/5669186/is-there-a-supported-way-to-embed-editable-sharepo)).
+So for the popup pattern we never iframe; we call `window.open(driveItem.webUrl, "_blank", "noopener")`.
+This is the "Edit in Word / Excel / PowerPoint" button in our sidebar — it works even for users
+whose browser blocks the beta iframe (some browser CSP configurations, some tenant-level policies
+that lock down where Office for the web can render), and it's the safest bet for editing flows
+that need to survive Microsoft eventually removing the beta `allowEdit` flag.
+
+Both paths produce the same writes — the document, version history, presence, and comments are all
+on the same Office service. The only difference is whether the editor renders inside our `<iframe>`
+or in a separate browser tab.
+
 ### What's NOT supported, and the workaround
 
 | Wanted | Reality (with citation) | Workaround |
 |---|---|---|
-| Editable Word/Excel/PowerPoint iframe inside your domain | Office for the web sets `frame-ancestors` CSP that blocks third-party domains. ([Microsoft Q&A confirmation](https://learn.microsoft.com/en-us/answers/questions/5669186/is-there-a-supported-way-to-embed-editable-sharepo)) | Launch edit in popup / new tab via `driveItem.webUrl`. Changes round-trip via AutoSave. |
+| **Editable Office iframe with only the v1.0 API** | The v1.0 `driveItem: preview` endpoint accepts only `page` and `zoom`. It always returns a read-only viewer. ([driveItem: preview (v1.0)](https://learn.microsoft.com/en-us/graph/api/driveitem-preview?view=graph-rest-1.0)) | Use the **beta** `driveItem: preview` with `allowEdit + viewer:"office" + chromeless:false` (we do this behind the Edit-inline switch), and/or fall back to the new-tab `webUrl` popup. |
+| Long-term-stable in-iframe editing without flags | Beta `allowEdit`/`viewer`/`chromeless` are marked **deprecated** in the docs and "will not be made available on the v1.0 endpoint." ([beta preview](https://learn.microsoft.com/en-us/graph/api/driveitem-preview?view=graph-rest-beta)) | Keep the inline-edit toggle behind a feature flag so it can be flipped off if Microsoft removes it; the new-tab `webUrl` flow is the production-safe fallback. |
 | Native sticky-note / annotation tools inside a PDF in our app | The March 2026 SPE PDF viewer is read-only with respect to authoring — it can *render* existing sticky notes, comments, and add **in-file search + print**. It does NOT provide an "add sticky note" UI. ([What's new — March 2026](https://learn.microsoft.com/en-us/sharepoint/dev/embedded/whats-new)) | Open the PDF in Microsoft Edge's native annotator (round-trips via SharePoint), or use the Adobe Acrobat for SharePoint integration. |
 | Embed Word editor on an unauthenticated public page | Editing requires M365 identity | Anonymous **view-only** share links allow embedded view |
 | Cross-tenant @mentions | M365 platform restriction | @mentions only work within the consuming tenant |
@@ -120,26 +168,6 @@ Read this section before you build anything new on SPE.
 | Combine `includeAllVersionHistory: true` and `name` parameter on copy | Known issue: `includeAllVersionHistory` is **silently ignored** if `name` is also set. ([driveItem: copy](https://learn.microsoft.com/en-us/graph/api/driveitem-copy?view=graph-rest-1.0)) | Wordembedded omits `name` from publish bodies; destination keeps the source filename. |
 | Webhook subscription that lives indefinitely | Subscription expirations capped at ~3 days for SharePoint resources. ([Graph webhooks](https://learn.microsoft.com/en-us/graph/webhooks)) | Wordembedded runs an `IHostedService` that re-PATCHes subscription expirations every 12 h. |
 | Large file upload through a single PUT | Files > 4 MB must use upload session. | Wordembedded creates an upload session on the backend and the frontend PUTs chunks directly to Graph. |
-
-### Beta-only capability — inline editable preview
-
-The Graph **beta** `driveItem: preview` endpoint accepts these extra parameters that the v1.0
-endpoint does not: ([driveItem: preview (beta)](https://learn.microsoft.com/en-us/graph/api/driveitem-preview?view=graph-rest-beta))
-
-| Parameter | Effect |
-|---|---|
-| `viewer: "office"` or `"onedrive"` | Pick the rendering app explicitly. |
-| `chromeless: false` | Show Office's toolbars/buttons. |
-| `allowEdit: true` | "The file can be edited from the embedded UI." |
-
-Microsoft explicitly notes in the doc:
-
-> "This parameter is deprecated and will not be made available on the v1.0 endpoint."
-
-In practice the docs steer developers toward the popup-edit path. Wordembedded exposes the beta
-flags behind a Fluent switch on the preview page so we can demo true inline editing where it works,
-with a graceful "Open in Office in new tab" fallback when the embed is refused by the browser's
-CSP. **Do not build a core flow that depends on `allowEdit` staying in beta.**
 
 ### Trial container type limits
 
