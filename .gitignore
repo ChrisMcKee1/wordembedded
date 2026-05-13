@@ -1,0 +1,45 @@
+# Infrastructure secrets
+src/infra/secrets/
+src/infra/*.pfx
+src/infra/*.cer
+src/infra/cert-password.txt
+src/infra/outputs.json
+
+# Backend secrets — populated locally via sync-config.ps1
+src/backend/**/appsettings.Development.json
+src/backend/**/appsettings.*.Development.json
+
+# .NET
+**/bin/
+**/obj/
+
+# Node / Next.js
+**/node_modules/
+src/frontend/.next/
+src/frontend/out/
+src/frontend/.env.local
+src/frontend/.env*.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+.idea/
+
+# User secrets (dotnet)
+**/secrets.json
+
+# Aspire local state
+.aspire/
+
+# Session / scratch
+*.tmp
+*.log
+
+# Agent tooling — not relevant to consumers
+.agents/
+skills-lock.json

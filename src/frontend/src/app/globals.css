@@ -1,0 +1,172 @@
+:root {
+  color-scheme: light;
+  --background: Canvas;
+  --foreground: CanvasText;
+  --muted: GrayText;
+  --surface: Canvas;
+  --border-subtle: ButtonBorder;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+html {
+  min-height: 100%;
+}
+
+html,
+body {
+  max-width: 100vw;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.fluent-root {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.centered-page,
+.workspace-page {
+  min-height: 100vh;
+}
+
+.centered-page {
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+
+.signin-page {
+  background: var(--background);
+}
+
+.signin-card,
+.content-card {
+  width: min(100%, 560px);
+  background: var(--surface);
+  border-color: var(--border-subtle);
+}
+
+.signin-card {
+  padding: 28px;
+  gap: 32px;
+}
+
+.workspace-page {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 40px 32px;
+}
+
+.workspace-header,
+.page-toolbar,
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.workspace-header {
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.page-toolbar {
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toolbar-actions {
+  gap: 12px;
+}
+
+.stack-lg,
+.stack-sm,
+.centered-copy {
+  display: grid;
+}
+
+.stack-lg {
+  gap: 28px;
+}
+
+.stack-sm,
+.centered-copy {
+  gap: 10px;
+}
+
+.centered-copy {
+  justify-items: center;
+  text-align: center;
+}
+
+.page-title {
+  display: block;
+  color: var(--foreground);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.page-copy {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.content-card {
+  padding: 28px;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .workspace-header,
+  .toolbar-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .workspace-page,
+  .centered-page {
+    padding: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

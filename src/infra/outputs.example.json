@@ -1,0 +1,27 @@
+{
+  "tenantId": "<your-tenant-guid>",
+  "tenantDomain": "<your-tenant>.onmicrosoft.com",
+  "owningSiteUrl": "https://<your-tenant>.sharepoint.com/sites/<your-site>",
+  "appRegistration": {
+    "clientId": "<entra-app-client-id>",
+    "objectId": "<entra-app-object-id>",
+    "servicePrincipalId": "<entra-sp-object-id>",
+    "apiScope": "api://<entra-app-client-id>/access_as_user",
+    "certificateThumbprint": "<cert-thumbprint-from-currentuser-my>",
+    "certificatePath": "secrets/wordembedded-dev.pfx",
+    "certificatePasswordEnvVar": "WORDEMBEDDED_CERT_PASSWORD"
+  },
+  "containerType": {
+    "id": "<container-type-guid>",
+    "name": "Wordembedded.Documents",
+    "billingType": "trial",
+    "expirationDateTime": "<ISO-8601-utc>"
+  },
+  "initialContainer": {
+    "id": "<container-id-starts-with-b!>",
+    "driveId": "<same-as-container-id>",
+    "displayName": "Workspace",
+    "webUrl": "https://<your-tenant>.sharepoint.com/contentstorage/CSP_<hash>/Document Library"
+  },
+  "blockers": []
+}
